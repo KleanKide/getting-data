@@ -1,21 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 import Product from "./typeForm";
-import { GET } from "../app/api/route";
 import ProductList from "./ProductList";
 import Form from "./Form";
 import { Button } from "./ui/button";
-const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 function MainPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [modal, setModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchData() {
-      const response = await GET(
-         `https://app.tablecrm.com/api/v1/nomenclature/?token=${apiKey}`,
+      const response = await fetch(
+         '/api',
       );
-      setProducts(response.result || []);
+      const result = await response.json()
+      console.log(result)
+      setProducts(result.result || []);
     }
     fetchData();
   }, []);

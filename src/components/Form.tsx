@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, Controller } from "react-hook-form";
-import { POST } from "../app/api/route";
+import { useState } from "react";
 import Product from "./typeForm";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,29 +14,30 @@ import {
 } from "@/components/ui/select";
 
 
-const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
-interface IProductForm extends Omit<Product, 'seo'> {
+interface IProductForm extends Omit<Product, "seo"> {
   seo: {
     seo_title: string;
     seo_description: string;
-    seo_keywords: string; 
-  }
+    seo_keywords: string;
+  };
 }
 
 interface IFormProps {
+  product?: Product;
   onAdd: (product: Product) => void;
   onCancel: () => void;
 }
 
 function Form({ onAdd, onCancel }: IFormProps) {
-  const { register, handleSubmit, control, formState: { isSubmitting } } = useForm<IProductForm>({
-    defaultValues: {
-      type: "product",
-      cashback_type: "no_cashback",
-      chatting_percent: 0,
-    }
-  });
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { isSubmitting },
+    reset,
+  } = useForm<IProductForm>({});
+  const [activeTab, setActiveTab] = useState<"main" | "seo" | "fast">("main");
 
   const onSubmit = async (data: IProductForm) => {
     const product: Product = {
@@ -55,11 +56,16 @@ function Form({ onAdd, onCancel }: IFormProps) {
     };
 
     try {
-      const result = await POST(
-        `https://app.tablecrm.com/api/v1/nomenclature/?token=${apiKey}`,
-        product
-      );
+      const response = await fetch('/api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(product)
+      });
+       const result = await response.json();
       onAdd(result);
+      reset();
     } catch (error) {
       console.error("Ошибка при отправке:", error);
     }
@@ -67,71 +73,184 @@ function Form({ onAdd, onCancel }: IFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <button
+        type="button"
+        onClick={() => setActiveTab("main")}
+        className={`px-4 py-2 ${activeTab === "main" ? "border-b-2 border-blue-500 font-bold" : ""}`}
+      >
+        Основное
+      </button>
+      <button
+        type="button"
+        onClick={() => setActiveTab("seo")}
+        className={`px-4 py-2 ${activeTab === "seo" ? "border-b-2 border-blue-500 font-bold" : ""}`}
+      >
+        SEO
+      </button>
+      <button
+        type="button"
+        onClick={() => setActiveTab("fast")}
+        className={`px-4 py-2 ${activeTab === "fast" ? "border-b-2 border-blue-500 font-bold" : ""}`}
+      >
+        Быстро
+      </button>
+
       <div className="flex gap-10">
-        <div className="flex flex-col gap-3">
-          <Input {...register("name")} placeholder="Название" />
+        {activeTab === "main" && (
+          <div className="flex flex-col gap-3 w-150 text-sm">
+            <label >
+              Имя
+              <Input {...register("name")} className="" />
+            </label>
+            <label>
+              Тип
+              <Controller
+                name="type"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue="">
+                    <SelectTrigger className="w-full max-w-48">
+                      <SelectValue placeholder="Выбери тип" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="product">Товар</SelectItem>
+                      <SelectItem value="offer">Услуга</SelectItem>
+                      <SelectItem value="service">Предложение</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </label>
+            <label>
+              Краткое описание
+              <Input {...register("description_short")} />
+            </label>
+            <label>
+              Длинное описание
+              <Input {...register("description_long")} />
+            </label>
+            <label>
+              Код товара
+              <Input {...register("code")} />
+            </label>
+            <label>
+              Единица
+              <Input type="number" {...register("unit")} />
+            </label>
+            <label>
+              Категория
+              <Input type="number" {...register("category")} />
+            </label>
+            <label>
+              Тип кэшбека
+              <Controller
+                name="cashback_type"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue="">
+                    <SelectTrigger className="w-full max-w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="percent">Проценты</SelectItem>
+                      <SelectItem value="const">Постоянный</SelectItem>
+                      <SelectItem value="lcard_cashback">По карте лояльности</SelectItem>
+                      <SelectItem value="no_cashback">Отсутствует</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </label>
+          </div>
+        )}
 
-    
-          <Controller
-            name="type"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <SelectTrigger className="w-full max-w-48">
-                  <SelectValue placeholder="Выбери тип" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="product">product</SelectItem>
-                  <SelectItem value="offer">offer</SelectItem>
-                  <SelectItem value="service">service</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
+        {activeTab === "seo" && (
+          <>
+            <div className="flex flex-col gap-3 w-150">
+              <label>
+                Seo Title
+                <Input
+                  {...register("seo.seo_title")}
+                  placeholder="Заголовок для поисковиков"
+                />
+              </label>
+              <label>
+                Seo Description
+                <Input
+                  {...register("seo.seo_description")}
+                  placeholder="Краткое описание для поисковиков"
+                />
+              </label>
+              <label>
+                Seo Keywords
+                <Input
+                  {...register("seo.seo_keywords")}
+                  placeholder="Ключевые слова"
+                />
+              </label>
+            </div>
+          </>
+        )}
 
-          <Input {...register("description_short")} placeholder="Краткое описание" />
-          <Input {...register("description_long")} placeholder="Длинное описание" />
-          <Input {...register("code")} placeholder="Код товара" />
-          <Input type="number" {...register("unit")} placeholder="Единица" />
-          <Input type="number" {...register("category")} placeholder="Категория" />
-
-          <Controller
-            name="cashback_type"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <SelectTrigger className="w-full max-w-48">
-                  <SelectValue placeholder="Выбери кэшбек" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="lcard_cashback">lcard_cashback</SelectItem>
-                  <SelectItem value="percent">percent</SelectItem>
-                  <SelectItem value="const">const</SelectItem>
-                  <SelectItem value="no_cashback">no_cashback</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <Input {...register("seo.seo_title")} placeholder="SEO название" />
-          <Input {...register("seo.seo_description")} placeholder="SEO описание" />
-          <Input {...register("seo.seo_keywords")} placeholder="SEO ключи через запятую" />
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <Input type="number" {...register("global_category_id")} placeholder="Глобальная категория" />
-          <Input type="number" {...register("marketplace_price")} placeholder="0.00" />
-          <Input type="number" {...register("chatting_percent")} placeholder="Процент чата" />
-          <Input {...register("address")} placeholder="Адрес" />
-          <Input type="number" {...register("latitude")} placeholder="Широта" />
-          <Input type="number" {...register("longitude")} placeholder="Долгота" />
-        </div>
+        {activeTab === "fast" && (
+          <div className="flex flex-col gap-3 w-150">
+            <label>
+              Глобальная категория
+              <Input
+                type="number"
+                {...register("global_category_id")}
+                placeholder="Выберите глобабальную категорию"
+              />
+            </label>
+            <label>
+              Цена для маркетплейса
+              <Input
+                type="number"
+                {...register("marketplace_price")}
+                placeholder="0.00"
+              />
+            </label>
+            <label>
+              Комиссия маркета
+              <Input
+                type="number"
+                {...register("chatting_percent")}
+                placeholder="4-100"
+              />
+            </label>
+            <label>
+              Адрес
+              <Input {...register("address")} placeholder="Введите адрес" />
+            </label>
+            <label>
+              Широта
+              <Input
+                disabled
+                type="number"
+                {...register("latitude")}
+                placeholder="Широта"
+              />
+            </label>
+            <label>
+              Долгота
+              <Input
+                type="number"
+                disabled
+                {...register("longitude")}
+                placeholder="Долгота"
+              />
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 mt-5">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           Отмена
         </Button>
 

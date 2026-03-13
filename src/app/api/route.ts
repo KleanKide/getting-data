@@ -1,41 +1,25 @@
-import Product from "../../components/typeForm"
+import { NextResponse } from 'next/server'
+import { TableCRM } from '@/services/queries';
 
-export  async function POST (url : string, data : Product){
-    try{
-     const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([data])
-    })
-     const result = await response.json()
-    if(!response.ok){
-        console.log("server" , result)
-        throw new Error(`Error ${response.status}`)    
-    }
-   
-    return result 
+export const GET = async () =>{
+    try{    
+        const data = await TableCRM.fetch()
+
+        return NextResponse.json(data) 
     }
     catch(error){
-        throw error
+        console.log(error)
     }
- 
-}
+} 
 
+export const POST = async (req: Request) =>{
+    try {
+        const body = await req.json() 
+        const result = await TableCRM.post(body)  
+        return NextResponse.json(result)
 
-export async function GET (url : string){
-    try{
-     const response = await fetch(url, {
-        method: "GET"
-    })
-     const getResult = await response.json()
-    if(!response.ok){
-        console.log("server" , getResult)
-        throw new Error(`Error ${response.status}`)    
-    }
-    return getResult 
-    }
+    } 
     catch(error){
-        throw error
+        console.log(error)
     }
- 
 } 
