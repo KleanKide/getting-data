@@ -12,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-
+import { useMutation} from "@tanstack/react-query";
 
 interface IProductForm extends Omit<Product, "seo"> {
   seo: {
@@ -22,24 +21,24 @@ interface IProductForm extends Omit<Product, "seo"> {
     seo_keywords: string;
   };
 }
-
 interface IFormProps {
   product?: Product;
   onAdd: (product: Product) => void;
   onCancel: () => void;
 }
-
 function Form({ onAdd, onCancel }: IFormProps) {
   const {
     register,
     handleSubmit,
     control,
-    formState: { isSubmitting },
     reset,
   } = useForm<IProductForm>({});
   const [activeTab, setActiveTab] = useState<"main" | "seo" | "fast">("main");
 
-  const onSubmit = async (data: IProductForm) => {
+
+  const {mutate, isPending} = useMutation({
+  mutationKey : ['add form'],
+  mutationFn: async (data: IProductForm) => {
     const product: Product = {
       ...data,
       unit: Number(data.unit),
@@ -54,22 +53,26 @@ function Form({ onAdd, onCancel }: IFormProps) {
         seo_keywords: data.seo.seo_keywords.split(",").map((k) => k.trim()),
       },
     };
-
-    try {
-      const response = await fetch('/api', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(product)
-      });
-       const result = await response.json();
+     
+    const res = await fetch('/api', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(product)
+  }) 
+  const result = await res.json()
+  return result
+  }
+})
+ 
+function onSubmit(data:IProductForm) {
+  mutate(data, {
+    onSuccess: (result)=>{
       onAdd(result);
-      reset();
-    } catch (error) {
-      console.error("Ошибка при отправке:", error);
-    }
-  };
+      reset()
+    },
+    onError: (error) => console.log(error)
+  })
+}
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -249,7 +252,7 @@ function Form({ onAdd, onCancel }: IFormProps) {
           type="button"
           variant="outline"
           onClick={onCancel}
-          disabled={isSubmitting}
+          disabled={isPending}
         >
           Отмена
         </Button>
@@ -257,9 +260,9 @@ function Form({ onAdd, onCancel }: IFormProps) {
         <Button
           className="bg-green-500 hover:bg-green-700 disabled:bg-gray-400"
           type="submit"
-          disabled={isSubmitting}
+          disabled={isPending}
         >
-          {isSubmitting ? "Отправка..." : "Отправить"}
+          {isPending ? "Отправка..." : "Отправить"}
         </Button>
       </div>
     </form>

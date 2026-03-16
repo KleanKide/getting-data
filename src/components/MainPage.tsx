@@ -1,29 +1,38 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Product from "./typeForm";
 import ProductList from "./ProductList";
 import Form from "./Form";
 import { Button } from "./ui/button";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+type ProductsResponse = {
+  result: Product[];
+};
+
 function MainPage() {
-  const [products, setProducts] = useState<Product[]>([]);
   const [modal, setModalOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      const response = await fetch(
-         '/api',
-      );
-      const result = await response.json()
-      console.log(result)
-      setProducts(result.result || []);
-    }
-    fetchData();
-  }, []);
-
-  function handleAddProduct(product: Product) {
-    setProducts((prev) => [...prev, product]);
+  async function fetchData() {
+    const response = await fetch("/api");
+    const result = await response.json();
+    return result;
   }
+  const { data, isLoading } = useQuery({
+    queryKey: ["data"],
+    queryFn: fetchData,
+  });
 
+  const queryClient = useQueryClient();
+  function handleAddProduct(product: Product) {
+    queryClient.invalidateQueries({ queryKey: ["data"] });
+    queryClient.setQueryData<ProductsResponse>(["data"], (oldData) => {
+      const currentData = oldData?.result ?? [];
+      return {
+        result: [...currentData, product],
+      };
+    });
+  }
   return (
     <div>
       <div className="">
@@ -65,7 +74,11 @@ function MainPage() {
           </div>
         </div>
       </div>
-      <ProductList items={products} />
+      {isLoading ? (
+        "Loading..."
+      ) : (
+        <ProductList items={data ? data.result : []} />
+      )}
     </div>
   );
 }
